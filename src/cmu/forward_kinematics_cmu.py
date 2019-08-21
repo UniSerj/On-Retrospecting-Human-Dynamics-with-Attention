@@ -13,13 +13,6 @@ import data_utils
 import tensorflow as tf
 import os
 
-#define which action to visualize
-# tf.app.flags.DEFINE_string("action", "eating", "specify action to visualize")
-tf.app.flags.DEFINE_string("file", "my_model_cmu_samples_outlength25_load6000_nogan.h5", "which file to load")
-tf.app.flags.DEFINE_string("sub_index", "_1", "which seed to visualize")
-FLAGS = tf.app.flags.FLAGS
-
-
 def fkl( angles, parent, offset, posInd, expmapInd ):
   """
   Convert joint angles and bone lenghts into the 3d points of a person.
@@ -188,137 +181,61 @@ def _some_variables():
 
   return parent, offset, posInd, expmapInd
 
-
-def update_pr(i):
-  # ob.update( xyz_pred[i,:], lcolor="#9b59b6", rcolor="#2ecc71")
-  ob.update( xyz_pred[i,:], lcolor="#1E1E1E", rcolor="#1E1E1E")
-  plt.show(block=False)
-  fig.canvas.draw()
-  plt.axis('off')
-  plt.pause(0.01)
-
-def update_GT(i):
-  # ob.update( xyz_gt[i,:])
-  ob.update( xyz_gt[i,:], lcolor="#1E1E1E", rcolor="#1E1E1E")
-  plt.show(block=False)
-  fig.canvas.draw()
-  plt.axis('off')
-  plt.pause(0.01)
-
-
-actions = ["jumping"]
-sub_index = 0
-# Load all the data
-parent, offset, rotInd, expmapInd = _some_variables()
-for action in actions:
-    # numpy implementation
-    # S_(6,6)_CMU CMU_RRNN
-    with h5py.File( './samples_SW/S_(6,6)_CMU.h5', 'r' ) as h5f:
-        # expmap_gt = h5f['expmap/gt/' + action + FLAGS.sub_index][40:50, :]
-        # expmap_pred = h5f['expmap/preds/' + action + FLAGS.sub_index][:]
-          expmap_gt = h5f['expmap/gt/' + action+'_'+str(sub_index)][4:14]
-          expmap_pred = h5f['expmap/preds/' + action+'_'+str(sub_index)][:10]
-
-    nframes_gt, nframes_pred = expmap_gt.shape[0], expmap_pred.shape[0]
-    print(nframes_gt,nframes_pred)
-
-    # Put them together and revert the coordinate space
-    expmap_all = revert_coordinate_space( np.vstack((expmap_gt, expmap_pred)), np.array([[0,0,-1],[0,1,0],[0,0,-1]]), np.zeros(3) )
-    expmap_gt   = expmap_all[:nframes_gt,:]
-    expmap_pred = expmap_all[nframes_gt:,:]
-
-    # Compute 3d points for each frame
-    xyz_gt, xyz_pred = np.zeros((nframes_gt, 114)), np.zeros((nframes_pred, 114))
-    for i in range( nframes_gt ):
-      xyz_gt[i,:] = fkl( expmap_gt[i,:], parent, offset, rotInd, expmapInd )
-    for i in range( nframes_pred ):
-      xyz_pred[i,:] = fkl( expmap_pred[i,:], parent, offset, rotInd, expmapInd )
-
-
-    # === Plot and animate ===
-    fig = plt.figure()
-    ax = plt.gca(projection='3d')
-    ob = viz_cmu.Ax3DPose(ax)
-
-    # # Plot the conditioning ground truth
-    # for i in range(nframes_gt):
-
-    #   ob.update( xyz_gt[i,:] )
-    #   plt.show(block=False)
-    #   fig.canvas.draw()
-    #   plt.axis('off')
-    #   # plt.savefig(path+"/frame_gt{}.png".format(i),bbox_inches='tight')
-    #   plt.pause(0.01)
-
-    # update_GT    update_pr
-    anim = animation.FuncAnimation(fig, update_pr, frames=np.arange(0, 10), interval=10)
-    # anim.save('./user_stories/prediction.gif', dpi=100, writer='imagemagick') 
-    # anim = animation.FuncAnimation(fig, update_pr, frames=np.arange(0, 25), interval=10)
-    # anim.save('prediction.gif', dpi=100, writer='imagemagick') 
-
-
-
-
-
 def main():
   actions = ["basketball"]
-  # sub_index = 1
-  # # Load all the data
-  # parent, offset, rotInd, expmapInd = _some_variables()
-  # for action in actions:
-  #     # numpy implementation
-  #     # S_(6,6)_CMU
-  #     # CMU_RRNN
-  #     with h5py.File( './samples_SW/S_(6,6)_CMU.h5', 'r' ) as h5f:
-  #         # expmap_gt = h5f['expmap/gt/' + action + FLAGS.sub_index][40:50, :]
-  #         # expmap_pred = h5f['expmap/preds/' + action + FLAGS.sub_index][:]
-  #         expmap_gt = h5f['expmap/gt/' + action+'_'+str(sub_index)][:]
-  #         expmap_pred = h5f['expmap/preds/' + action+'_'+str(sub_index)][:]
+  sub_index = 1
+  # Load all the data
+  parent, offset, rotInd, expmapInd = _some_variables()
+  for action in actions:
+      # numpy implementation
+      # S_(6,6)_CMU
+      # CMU_RRNN
+      with h5py.File( './samples_SW/S_(6,6)_CMU.h5', 'r' ) as h5f:
+          # expmap_gt = h5f['expmap/gt/' + action + FLAGS.sub_index][40:50, :]
+          # expmap_pred = h5f['expmap/preds/' + action + FLAGS.sub_index][:]
+          expmap_gt = h5f['expmap/gt/' + action+'_'+str(sub_index)][:]
+          expmap_pred = h5f['expmap/preds/' + action+'_'+str(sub_index)][:]
 
-  #     nframes_gt, nframes_pred = expmap_gt.shape[0], expmap_pred.shape[0]
-  #     print(nframes_gt,nframes_pred)
+      nframes_gt, nframes_pred = expmap_gt.shape[0], expmap_pred.shape[0]
+      print(nframes_gt,nframes_pred)
 
-  #     # Put them together and revert the coordinate space
-  #     expmap_all = revert_coordinate_space( np.vstack((expmap_gt, expmap_pred)), np.array([[0,0,-1],[0,1,0],[0,0,-1]]), np.zeros(3) )
-  #     expmap_gt   = expmap_all[:nframes_gt,:]
-  #     expmap_pred = expmap_all[nframes_gt:,:]
+      # Put them together and revert the coordinate space
+      expmap_all = revert_coordinate_space( np.vstack((expmap_gt, expmap_pred)), np.array([[0,0,-1],[0,1,0],[0,0,-1]]), np.zeros(3) )
+      expmap_gt   = expmap_all[:nframes_gt,:]
+      expmap_pred = expmap_all[nframes_gt:,:]
 
-  #     # Compute 3d points for each frame
-  #     xyz_gt, xyz_pred = np.zeros((nframes_gt, 114)), np.zeros((nframes_pred, 114))
-  #     for i in range( nframes_gt ):
-  #       xyz_gt[i,:] = fkl( expmap_gt[i,:], parent, offset, rotInd, expmapInd )
-  #     for i in range( nframes_pred ):
-  #       xyz_pred[i,:] = fkl( expmap_pred[i,:], parent, offset, rotInd, expmapInd )
+      # Compute 3d points for each frame
+      xyz_gt, xyz_pred = np.zeros((nframes_gt, 114)), np.zeros((nframes_pred, 114))
+      for i in range( nframes_gt ):
+        xyz_gt[i,:] = fkl( expmap_gt[i,:], parent, offset, rotInd, expmapInd )
+      for i in range( nframes_pred ):
+        xyz_pred[i,:] = fkl( expmap_pred[i,:], parent, offset, rotInd, expmapInd )
 
-  #     # === Plot and animate ===
-  #     fig = plt.figure()
-  #     ax = plt.gca(projection='3d')
-  #     ob = viz_cmu.Ax3DPose(ax)
+      # === Plot and animate ===
+      fig = plt.figure()
+      ax = plt.gca(projection='3d')
+      ob = viz_cmu.Ax3DPose(ax)
 
-  #     # path="visualize_ours/"+FLAGS.file+'/'+action
-  #     # # path = "visualize_ours/20171026/" + FLAGS.file + FLAGS.sub_index + '/' + action
-  #     # if not os.path.exists(path):
-  #     #     os.makedirs(path)
-  #     # Plot the conditioning ground truth
-  #     path = './imgs/cmu/'+actions[0]+'/'+actions[0]+'_ST'
-  #     for i in range(nframes_gt):
+      # Plot the conditioning ground truth
+      path = './imgs/cmu/'+actions[0]+'/'+actions[0]+'_ST'
+      for i in range(nframes_gt):
 
-  #       ob.update( xyz_gt[i,:] )
-  #       plt.show(block=False)
-  #       fig.canvas.draw()
-  #       plt.axis('off')
-  #       # plt.savefig(path+"/frame_gt{}.png".format(i),bbox_inches='tight')
-  #       plt.pause(0.01)
+        ob.update( xyz_gt[i,:] )
+        plt.show(block=False)
+        fig.canvas.draw()
+        plt.axis('off')
+        # plt.savefig(path+"/frame_gt{}.png".format(i),bbox_inches='tight')
+        plt.pause(0.01)
 
-  #     # Plot the prediction
-  #     for i in range(nframes_pred):
+      # Plot the prediction
+      for i in range(nframes_pred):
 
-  #       ob.update( xyz_pred[i,:], lcolor="#9b59b6", rcolor="#2ecc71" )
-  #       plt.show(block=False)
-  #       fig.canvas.draw()
-  #       plt.axis('off')
-  #       # plt.savefig(path+"/frame_pr{}.png".format(i),bbox_inches='tight')
-  #       plt.pause(0.01)
+        ob.update( xyz_pred[i,:], lcolor="#9b59b6", rcolor="#2ecc71" )
+        plt.show(block=False)
+        fig.canvas.draw()
+        plt.axis('off')
+        # plt.savefig(path+"/frame_pr{}.png".format(i),bbox_inches='tight')
+        plt.pause(0.01)
 
 
 if __name__ == '__main__':
